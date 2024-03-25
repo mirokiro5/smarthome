@@ -1,0 +1,14 @@
+smarthome/sensors/device12345_12345/config
+{
+  "device_id":12345,
+  "name":"device12345",
+  "topics":["temperature"]
+}
+
+smarthome/sensors/device12345_12345/temperature
+{
+  "device_id":12345,
+  "topic":"temperature",
+  "value": 24
+}
+

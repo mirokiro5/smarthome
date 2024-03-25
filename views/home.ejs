@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Дом</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="/css/switch.css" type="text/css">
+    <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+<div>
+    <% if (devices) { %>
+        <% devices.forEach(function(device) { %>
+            <%if (device.topics.includes('temperature')){%>
+                <p><%= device.name %></p>
+            <canvas class="chart" id="chart_<%= device.device_id %>" width="600" height="400"></canvas>
+            <% } %>
+    <% })}; %>
+</div>
+<div>
+<% if (devices) { %>
+        <% devices.forEach(function(device) { %>
+            <% if (device.topics.includes('switch')) {%>
+            <p><%= device.name %></p>
+            <input type="checkbox" id=switch_<%= device.device_id %> /><label for=switch_<%= device.device_id %>><%= device.name %></label>
+            <% } %>
+        <% })}; %>
+</div>
+</body>
+
+<script>
+    $(":checkbox").change(function() {
+        const device_id= $(this).attr('id').replace("switch_", "");
+        if ($(this).is(':checked')) {
+            console.log($(this).attr('id'));
+            $.post(`http://localhost:8000/api/devices/${device_id}/switch`, {value: 1}, (data, status) => {
+                console.log(data);
+            });
+        } else {
+            $.post(`http://localhost:8000/api/devices/${device_id}/switch`, {value: 0}, (data, status) => {
+                console.log(data);
+            });
+        }
+    });
+    setInterval(function() {
+    // Get all checkboxes
+    const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+
+    checkboxes.forEach(function(checkbox) {
+        // Extract device id from checkbox id
+        const device_id = checkbox.id.replace("switch_", "");
+
+        // Send GET request
+        $.get(`http://localhost:8000/api/devices/${device_id}/last_data`, function(data) {
+            // Update checkbox state based on response data
+            checkbox.checked = data[0].value === 1;
+        });
+    });
+}, 5000); // Update every 5 seconds
+</script>
+<script>
+    async function createChart() {
+    const chartElements = document.getElementsByClassName("chart");
+    const charts = [];
+
+    for (var i = 0; i < chartElements.length; i++) {
+        const device_id = chartElements[i].id.replace("chart_", "");
+        const data = await $.get(`http://localhost:8000/api/devices/${device_id}/data`);
+        const labels = [];
+        const temp_data = [];
+        data.forEach(function (item) {
+            labels.push(item.hours.toString()+":"+item.minutes.toString());
+            temp_data.push(item.value);
+        });
+
+        const chart = new Chart(chartElements[i], {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: chartElements[i].id,
+                    data: temp_data,
+                }]
+            }
+        });
+
+        charts.push(chart);
+    }
+
+    // Update the charts every 5 seconds
+    setInterval(async function() {
+        for (var i = 0; i < charts.length; i++) {
+            const device_id = chartElements[i].id.replace("chart_", "");
+            const data = await $.get(`http://localhost:8000/api/devices/${device_id}/data`);
+            const labels = [];
+            const temp_data = [];
+            data.forEach(function (item) {
+                labels.push(item.hours.toString()+":"+item.minutes.toString());
+                temp_data.push(item.value);
+            });
+
+            charts[i].data.labels = labels;
+            charts[i].data.datasets[0].data = temp_data;
+            charts[i].update();
+        }
+    }, 5000);
+}
+
+createChart();
+</script>
+<html>
